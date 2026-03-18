@@ -1,0 +1,71 @@
+name: Build Canary Demo - Push to ECR
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'canary-app/**'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Tag de la imagen (ej: v1.0.0, v2.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: canary-demo
+  IMAGE_TAG: ${{ github.event.inputs.image_tag || 'v1.0.0' }}
+
+jobs:
+  build-and-push:
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+        docker build \
+          --platform linux/amd64 \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+          -f canary-app/Dockerfile \
+          canary-app/
+
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+    - name: Output image URI
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+        echo "## Imagen publicada" >> $GITHUB_STEP_SUMMARY
+        echo "- **Registry:** $ECR_REGISTRY/$ECR_REPOSITORY" >> $GITHUB_STEP_SUMMARY
+        echo "- **Tag:** $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+        echo "- **SHA:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Desplegar en EKS:" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo "kubectl argo rollouts set image canary-demo canary-demo=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -n canary-demo" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY

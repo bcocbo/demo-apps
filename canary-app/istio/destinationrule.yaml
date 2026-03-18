@@ -1,0 +1,38 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: canary-demo-dest-rule
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  host: canary-demo
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_REQUEST
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+  subsets:
+  - name: stable
+    labels:
+      app: canary-demo
+    trafficPolicy:
+      loadBalancer:
+        simple: LEAST_REQUEST
+  - name: canary
+    labels:
+      app: canary-demo
+    trafficPolicy:
+      loadBalancer:
+        simple: LEAST_REQUEST

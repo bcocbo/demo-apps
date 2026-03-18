@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-demo-config
+  namespace: canary-demo
+data:
+  # Default configuration - can be overridden per environment
+  FAILURE_RATE: "0.0"
+  LATENCY_MS: "0"
+  PORT: "8080"

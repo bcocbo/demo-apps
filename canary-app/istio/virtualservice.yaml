@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: canary-demo-vsvc
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  hosts:
+  - canary-demo
+  - canary-demo.canary-demo.svc.cluster.local
+  http:
+  - name: primary
+    match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: canary-demo
+        subset: stable
+      weight: 100
+    - destination:
+        host: canary-demo
+        subset: canary
+      weight: 0
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canary-demo
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: canary-demo
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: canary-demo
+        image: canary-demo:v1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: APP_VERSION
+          value: "v1.0.0"
+        - name: FAILURE_RATE
+          valueFrom:
+            configMapKeyRef:
+              name: canary-demo-config
+              key: FAILURE_RATE
+        - name: LATENCY_MS
+          valueFrom:
+            configMapKeyRef:
+              name: canary-demo-config
+              key: LATENCY_MS
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: canary-demo-config
+              key: PORT
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL

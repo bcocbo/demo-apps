@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: canary-demo
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  
+  strategy:
+    canary:
+      steps:
+      - setWeight: 10
+      - pause: {duration: 30s}
+      - setWeight: 25
+      - pause: {duration: 30s}
+      - setWeight: 50
+      - pause: {duration: 30s}
+      - setWeight: 75
+      - pause: {duration: 30s}
+      
+      trafficRouting:
+        istio:
+          virtualService:
+            name: canary-demo-vsvc
+            routes:
+            - primary
+          destinationRule:
+            name: canary-demo-dest-rule
+            canarySubsetName: canary
+            stableSubsetName: stable
+  
+  selector:
+    matchLabels:
+      app: canary-demo
+  
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+    spec:
+      containers:
+      - name: canary-demo
+        image: 226633502530.dkr.ecr.us-east-1.amazonaws.com/canary-demo:v1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: APP_VERSION
+          value: "v1.0.0"
+        - name: FAILURE_RATE
+          value: "0.0"
+        - name: LATENCY_MS
+          value: "0"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5

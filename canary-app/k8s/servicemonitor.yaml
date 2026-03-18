@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: canary-demo
+  namespace: canary-demo
+  labels:
+    app: canary-demo
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: canary-demo
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
