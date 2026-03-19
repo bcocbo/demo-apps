@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
       - name: canary-demo
-        image: 226633502530.dkr.ecr.us-east-1.amazonaws.com/canary-demo:v1.0.4
+        image: 226633502530.dkr.ecr.us-east-1.amazonaws.com/canary-demo:v1.0.1
         ports:
         - containerPort: 8080
           name: http
