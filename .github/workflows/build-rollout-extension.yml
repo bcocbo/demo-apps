@@ -26,8 +26,8 @@ jobs:
       run: |
         curl -L -o /tmp/extension.tar "$EXTENSION_URL"
         tar -xf /tmp/extension.tar -C /tmp
-        cp /tmp/resources/extension-Rollout.js/extensions-Rollout.js pocargorollout/controller/extension-init-container/extensions-Rollout.js
-        ls -lh pocargorollout/controller/extension-init-container/extensions-Rollout.js
+        cp /tmp/resources/extension-Rollout.js/extensions-Rollout.js rollout-extension/extensions-Rollout.js
+        ls -lh rollout-extension/extensions-Rollout.js
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -52,8 +52,8 @@ jobs:
           --platform linux/amd64 \
           -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
           -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-          -f pocargorollout/controller/extension-init-container/Dockerfile \
-          pocargorollout/controller/extension-init-container/
+          -f rollout-extension/Dockerfile \
+          rollout-extension/
 
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
@@ -65,8 +65,3 @@ jobs:
         echo "## Imagen publicada" >> $GITHUB_STEP_SUMMARY
         echo "- **Registry:** $ECR_REGISTRY/$ECR_REPOSITORY" >> $GITHUB_STEP_SUMMARY
         echo "- **Tag:** $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Aplicar patch al argocd-server:" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "bash pocargorollout/controller/patch-argocd-server.sh" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
