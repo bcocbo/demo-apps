@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-analysis-success-rate
+  namespace: canary-analysis
+  labels:
+    app: canary-analysis
+    type: analysis-template
+spec:
+  args:
+  - name: service-name
+    value: canary-analysis
+  - name: namespace
+    value: canary-analysis
+  metrics:
+  # Métrica 1: Tasa de éxito HTTP >= 95%
+  - name: success-rate
+    provider:
+      prometheus:
+        address: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{status="200",namespace="{{args.namespace}}"}[2m]))
+          /
+          sum(rate(http_requests_total{namespace="{{args.namespace}}"}[2m]))
+          * 100
+    successCondition: result[0] >= 95
+    failureCondition: result[0] < 90
+    interval: 30s
+    count: 5
+    failureLimit: 2
+
+  # Métrica 2: Latencia P99 < 500ms
+  - name: latency-p99
+    provider:
+      prometheus:
+        address: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{namespace="{{args.namespace}}"}[2m])) by (le)
+          ) * 1000
+    successCondition: result[0] <= 500
+    failureCondition: result[0] > 1000
+    interval: 30s
+    count: 5
+    failureLimit: 2
+
+  # Métrica 3: Tasa de error 5xx < 5%
+  - name: error-rate
+    provider:
+      prometheus:
+        address: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
+        query: |
+          (
+            sum(rate(http_requests_total{status=~"5..",namespace="{{args.namespace}}"}[2m]))
+            /
+            sum(rate(http_requests_total{namespace="{{args.namespace}}"}[2m]))
+          ) * 100
+    successCondition: result[0] <= 5
+    failureCondition: result[0] > 10
+    interval: 30s
+    count: 5
+    failureLimit: 2
