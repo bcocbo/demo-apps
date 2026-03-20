@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: canary-analysis
+  namespace: canary-analysis
+  labels:
+    app: canary-analysis
+    release: prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: canary-analysis
+  namespaceSelector:
+    matchNames:
+    - canary-analysis
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
