@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary-analysis
+  namespace: canary-analysis
+  labels:
+    app: canary-analysis
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: canary-analysis
+  type: ClusterIP
