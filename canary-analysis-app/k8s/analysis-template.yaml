@@ -19,12 +19,14 @@ spec:
       prometheus:
         address: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
         query: |
-          sum(rate(http_requests_total{status="200",namespace="{{args.namespace}}"}[2m]))
-          /
-          sum(rate(http_requests_total{namespace="{{args.namespace}}"}[2m]))
-          * 100
+          (
+            sum(rate(http_requests_total{status="200",namespace="{{args.namespace}}"}[2m]))
+            /
+            sum(rate(http_requests_total{namespace="{{args.namespace}}"}[2m]))
+          ) * 100 or vector(0)
     successCondition: result[0] >= 95
     failureCondition: result[0] < 90
+    inconclusiveLimit: 3
     interval: 30s
     count: 5
     failureLimit: 2
@@ -37,9 +39,10 @@ spec:
         query: |
           histogram_quantile(0.99,
             sum(rate(http_request_duration_seconds_bucket{namespace="{{args.namespace}}"}[2m])) by (le)
-          ) * 1000
+          ) * 1000 or vector(0)
     successCondition: result[0] <= 500
     failureCondition: result[0] > 1000
+    inconclusiveLimit: 3
     interval: 30s
     count: 5
     failureLimit: 2
@@ -54,9 +57,10 @@ spec:
             sum(rate(http_requests_total{status=~"5..",namespace="{{args.namespace}}"}[2m]))
             /
             sum(rate(http_requests_total{namespace="{{args.namespace}}"}[2m]))
-          ) * 100
+          ) * 100 or vector(0)
     successCondition: result[0] <= 5
     failureCondition: result[0] > 10
+    inconclusiveLimit: 3
     interval: 30s
     count: 5
     failureLimit: 2
