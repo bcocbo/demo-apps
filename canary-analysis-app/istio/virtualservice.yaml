@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: canary-analysis-vsvc
+  namespace: canary-analysis
+  labels:
+    app: canary-analysis
+spec:
+  hosts:
+  - canary-analysis
+  - canary-analysis.canary-analysis.svc.cluster.local
+  http:
+  - name: primary
+    match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: canary-analysis
+        subset: stable
+      weight: 100
+    - destination:
+        host: canary-analysis
+        subset: canary
+      weight: 0
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,reset,connect-failure,refused-stream
