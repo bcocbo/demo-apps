@@ -72,9 +72,9 @@ spec:
           protocol: TCP
         env:
         - name: APP_VERSION
-          value: "v1.0.0"
+          value: "v2.0.0-bad"
         - name: FAILURE_RATE
-          value: "0.0"
+          value: "0.15"
         - name: LATENCY_MS
           value: "0"
         resources:
