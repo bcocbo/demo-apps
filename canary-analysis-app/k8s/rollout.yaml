@@ -1,0 +1,98 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: canary-analysis
+  namespace: canary-analysis
+  labels:
+    app: canary-analysis
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+
+  strategy:
+    canary:
+      steps:
+      # Paso 1: 10% tráfico + análisis automático
+      - setWeight: 10
+      - analysis:
+          templates:
+          - templateName: canary-analysis-success-rate
+          args:
+          - name: service-name
+            value: canary-analysis
+          - name: namespace
+            value: canary-analysis
+      # Paso 2: 25% tráfico + análisis
+      - setWeight: 25
+      - pause: {duration: 30s}
+      # Paso 3: 50% tráfico + análisis
+      - setWeight: 50
+      - analysis:
+          templates:
+          - templateName: canary-analysis-success-rate
+          args:
+          - name: service-name
+            value: canary-analysis
+          - name: namespace
+            value: canary-analysis
+      # Paso 4: 75% tráfico
+      - setWeight: 75
+      - pause: {duration: 30s}
+      # Paso 5: 100% - promoción completa
+
+      trafficRouting:
+        istio:
+          virtualService:
+            name: canary-analysis-vsvc
+            routes:
+            - primary
+          destinationRule:
+            name: canary-analysis-dest-rule
+            canarySubsetName: canary
+            stableSubsetName: stable
+
+      # Rollback automático si el análisis falla
+      abortScaleDownDelaySeconds: 30
+
+  selector:
+    matchLabels:
+      app: canary-analysis
+
+  template:
+    metadata:
+      labels:
+        app: canary-analysis
+    spec:
+      containers:
+      - name: canary-analysis
+        image: 226633502530.dkr.ecr.us-east-1.amazonaws.com/canary-analysis:v1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: APP_VERSION
+          value: "v1.0.0"
+        - name: FAILURE_RATE
+          value: "0.0"
+        - name: LATENCY_MS
+          value: "0"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
